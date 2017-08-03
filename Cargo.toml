@@ -7,6 +7,14 @@ authors = ["alanpoon"]
 conrod = { path ="../conrod", features = ["glium","winit"]}
 conrod_derive = { path ="../conrod/conrod_derive"}
 greed_websocket = {path ="../greed_websocket"}
-itertools = "0.4.4"
+itertools = "0.6.0"
 image ="*"
 find_folder ="*"
+
+[lib]
+name = "conrod_thread"
+path = "src/lib.rs"
+
+[[bin]]
+name = "main"
+path = "src/main.rs"

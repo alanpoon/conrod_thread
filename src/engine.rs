@@ -16,7 +16,7 @@ impl Engine {
         Engine {}
     }
 
-    pub fn run_loop(&mut self) {
+    pub fn run_loop(&self) {
         use image;
         use conrod::{self, widget, Colorable, Positionable, Sizeable, Widget, color};
         use conrod::backend::glium::glium;
