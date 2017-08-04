@@ -3,6 +3,7 @@ extern crate conrod;
 extern crate find_folder;
 extern crate image;
 use conrod_thread::run_conrod;
+use run_conrod::Message;
 use self::conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
 const WIN_W: u32 = 600;
@@ -36,6 +37,17 @@ fn main() {
     std::thread::spawn(move || run_conrod::run(rust_logo, event_rx, render_tx, window_proxy));
     let mut c = 0;
     let mut last_update = std::time::Instant::now();
+        let event_tx_clone = event_tx.clone();
+        std::thread::spawn(move || {
+            let mut o = 0;
+                'update: loop {
+                    println!("o {:?}",o);
+                    let five_sec = std::time::Duration::from_secs(5);
+                     std::thread::sleep(five_sec);
+                     event_tx_clone.send(Message::Websocket(o)).unwrap();
+                     o+=1;
+                }
+        });
     'main: loop {
 
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least
@@ -59,7 +71,7 @@ fn main() {
 
             // Use the `winit` backend feature to convert the winit event to a conrod one.
             if let Some(event) = conrod::backend::winit::convert(event.clone(), &display) {
-                event_tx.send(event).unwrap();
+                event_tx.send(Message::Event(event)).unwrap();
             }
 
             match event {
@@ -86,6 +98,8 @@ fn main() {
 
         last_update = std::time::Instant::now();
     }
+
+
 
 }
 

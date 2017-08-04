@@ -8,7 +8,7 @@ use find_folder;
 const WIN_W: u32 = 800;
 const WIN_H: u32 = 600;
 pub fn run(rust_logo: conrod::image::Id,
-           event_rx: std::sync::mpsc::Receiver<conrod::event::Input>,
+           event_rx: std::sync::mpsc::Receiver<Message>,
            render_tx: std::sync::mpsc::Sender<conrod::render::OwnedPrimitives>,
            window_proxy: glium::glutin::WindowProxy) {
     let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).build();
@@ -39,13 +39,20 @@ pub fn run(rust_logo: conrod::image::Id,
         // Collect any pending events.
         let mut events = Vec::new();
         while let Ok(event) = event_rx.try_recv() {
+            if let Message::Websocket(j) = event{
+            c = j;
+        }
             events.push(event);
         }
 
         // If there are no events pending, wait for them.
         if events.is_empty() || !needs_update {
             match event_rx.recv() {
-                Ok(event) => events.push(event),
+                Ok(event) => {
+                    if let Message::Websocket(j) = event{
+                        c = j;
+                    }
+                    events.push(event);},
                 Err(_) => break 'conrod,
             };
         }
@@ -54,7 +61,9 @@ pub fn run(rust_logo: conrod::image::Id,
 
         // Input each event into the `Ui`.
         for event in events {
-            ui.handle_event(event);
+            if let Message::Event(e) = event{
+                 ui.handle_event(e);
+            }
             needs_update = true;
         }
 
