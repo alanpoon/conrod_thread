@@ -21,7 +21,10 @@ impl EventLoop {
     }
 
     /// Produce an iterator yielding all available events.
-    pub fn next(&mut self, display: &glium::Display,event_rx:std::sync::mpsc::Receiver<OwnedMessage>) -> Vec<Message> {
+    pub fn next(&mut self,
+                display: &glium::Display,
+                event_rx: std::sync::mpsc::Receiver<OwnedMessage>)
+                -> Vec<Message> {
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least 16ms
         // since the last yield.
         let last_update = self.last_update;
@@ -33,13 +36,13 @@ impl EventLoop {
 
         // Collect all pending events.
         let mut events = Vec::new();
-        events.extend(display.poll_events().map(|z|Message::Event(z)));
-         while let Ok(msg) = event_rx.try_recv() {
-                    events.push(Message::Websocket(msg));
-                }
+        events.extend(display.poll_events().map(|z| Message::Event(z)));
+        while let Ok(msg) = event_rx.try_recv() {
+            events.push(Message::Websocket(msg));
+        }
         // If there are no events and the `Ui` does not need updating, wait for the next event.
         if events.is_empty() && !self.ui_needs_update {
-            events.extend(display.wait_events().next().map(|z|Message::Event(z)));
+            events.extend(display.wait_events().next().map(|z| Message::Event(z)));
         }
 
         self.ui_needs_update = false;

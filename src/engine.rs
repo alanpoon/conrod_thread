@@ -9,8 +9,6 @@ use std::time::{Duration, Instant};
 use std::thread::sleep;
 use custom_widget::chatview;
 
-const LIB_PATH: &'static str = "target/debug/libtest_shared.so";
-
 pub struct Engine {}
 impl Engine {
     pub fn new() -> Self {

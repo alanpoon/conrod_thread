@@ -1,4 +1,4 @@
-use conrod::{self, widget, Colorable, Labelable, Positionable, Widget, image, Sizeable, Rect,color};
+use conrod::{self, widget, Colorable, Labelable, Positionable, Widget, image, Sizeable, Rect, color};
 use self::widget::id::Generator;
 use itertools::multizip;
 /// The type upon which we'll implement the `Widget` trait.
@@ -10,7 +10,7 @@ pub struct ChatView<'a> {
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
     lists: Vec<Message<'a>>,
-    text_edit:&'a mut String,
+    text_edit: &'a mut String,
     /// See the Style struct below.
     style: Style,
     /// Whether the button is currently enabled, i.e. whether it responds to
@@ -61,18 +61,18 @@ widget_ids! {
 pub struct State {
     pub ids: Ids,
 }
-impl State{
-    pub fn resize(&mut self,num_list:usize,gen:&mut Generator ){
-        self.ids.display_pics.resize(num_list,gen)
+impl State {
+    pub fn resize(&mut self, num_list: usize, gen: &mut Generator) {
+        self.ids.display_pics.resize(num_list, gen)
     }
 }
 impl<'a> ChatView<'a> {
     /// Create a button context to be built upon.
-    pub fn new(lists: Vec<Message<'a>>,te:&'a mut String) -> Self {
+    pub fn new(lists: Vec<Message<'a>>, te: &'a mut String) -> Self {
         ChatView {
             lists: lists,
             common: widget::CommonBuilder::default(),
-            text_edit:te,
+            text_edit: te,
             style: Style::default(),
             enabled: true,
         }
@@ -116,11 +116,13 @@ impl<'a> Widget for ChatView<'a> {
 
     /// Update the state of the button by handling any input that has occurred since the last
     /// update.
-    fn update(self, args: widget::UpdateArgs<Self>) ->Option<()>{
+    fn update(self, args: widget::UpdateArgs<Self>) -> Option<()> {
         let widget::UpdateArgs { id, mut state, rect, mut ui, style, .. } = args;
         let num_list = self.lists.len();
         if state.ids.display_pics.len() < num_list {
-            state.update(|state| state.ids.display_pics.resize(num_list, &mut ui.widget_id_generator()));
+            state.update(|state| {
+                             state.ids.display_pics.resize(num_list, &mut ui.widget_id_generator())
+                         });
         }
         if state.ids.names.len() < num_list {
             state.update(|state| state.ids.names.resize(num_list, &mut ui.widget_id_generator()));
@@ -136,35 +138,55 @@ impl<'a> Widget for ChatView<'a> {
         // Finally, we'll describe how we want our widget drawn by simply instantiating the
         // necessary primitive graphics widgets.
         //
-            widget::Canvas::new().flow_down(&[
-                (state.ids.message_panel,widget::Canvas::new().color(color::GREEN).pad_bottom(20.0)),
-                (state.ids.text_edit_body,widget::Canvas::new().length(200.0).flow_right(&[
-                      (state.ids.text_edit_panel,widget::Canvas::new().scroll_kids_vertically()
-            .color(color::DARK_CHARCOAL).length(600.0)),(state.ids.text_edit_button_panel,widget::Canvas::new().color(color::DARK_CHARCOAL))
-                ]))
-            ]).middle_of(id).set(state.ids.chat_canvas,ui);
-    
-        let mut k =self.text_edit;
-          for edit in widget::TextEdit::new(k)
+        widget::Canvas::new()
+            .flow_down(&[(state.ids.message_panel,
+                          widget::Canvas::new().color(color::GREEN).pad_bottom(20.0)),
+                         (state.ids.text_edit_body,
+                          widget::Canvas::new()
+                              .length(200.0)
+                              .flow_right(&[(state.ids.text_edit_panel,
+                                             widget::Canvas::new()
+                                                 .scroll_kids_vertically()
+                                                 .color(color::DARK_CHARCOAL)
+                                                 .length(600.0)),
+                                            (state.ids.text_edit_button_panel,
+                                             widget::Canvas::new()
+                                                 .color(color::DARK_CHARCOAL))]))])
+            .middle_of(id)
+            .set(state.ids.chat_canvas, ui);
+
+        let mut k = self.text_edit;
+        for edit in widget::TextEdit::new(k)
             .color(color::GREY)
             .padded_w_of(state.ids.text_edit_panel, 20.0)
             .mid_top_of(state.ids.text_edit_panel)
             .center_justify()
             .line_spacing(2.5)
             .restrict_to_height(false) // Let the height grow infinitely and scroll.
-            .set(state.ids.text_edit, ui)
-        {
+            .set(state.ids.text_edit, ui) {
             *k = edit;
         }
-         if widget::Button::new().color(color::GREY).w_h(120.0, 60.0).label("Enter")
-         .middle_of(state.ids.text_edit_button_panel)
-         .set(state.ids.text_edit_button,ui).was_clicked(){
-             *k="".to_owned();
-         };
-        widget::Scrollbar::y_axis(state.ids.text_edit_panel).auto_hide(true).set(state.ids.text_edit_panel_scrollbar, ui);
-        for (i, a, &dp_i,&name_i,&text_i,&rect_i) in multizip((0..100, self.lists.iter(), state.ids.display_pics.iter(),state.ids.names.iter(),state.ids.texts.iter(),state.ids.rects.iter())) {
+        if widget::Button::new()
+               .color(color::GREY)
+               .w_h(120.0, 60.0)
+               .label("Enter")
+               .middle_of(state.ids.text_edit_button_panel)
+               .set(state.ids.text_edit_button, ui)
+               .was_clicked() {
+            *k = "".to_owned();
+        };
+        widget::Scrollbar::y_axis(state.ids.text_edit_panel)
+            .auto_hide(true)
+            .set(state.ids.text_edit_panel_scrollbar, ui);
+        for (i, a, &dp_i, &name_i, &text_i, &rect_i) in
+            multizip((0..100,
+                      self.lists.iter(),
+                      state.ids.display_pics.iter(),
+                      state.ids.names.iter(),
+                      state.ids.texts.iter(),
+                      state.ids.rects.iter())) {
 
-         /*   widget::Rectangle::fill([w-30.0, a.height])
+            /*   widget::Rectangle::fill([w-30.0, a.height])
                 .up(a.height)
                 .align_middle_x_of(id)
               //  .graphics_for(id)
@@ -196,7 +218,7 @@ impl<'a> Widget for ChatView<'a> {
                 .set(text_i, ui);
                 */
         }
-        
+
         Some(())
     }
 }
