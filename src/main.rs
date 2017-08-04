@@ -8,6 +8,8 @@ use self::conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
 const WIN_W: u32 = 600;
 const WIN_H: u32 = 800;
+use conrod_thread::backend::greed_websocket::futures;
+use conrod_thread::backend::greed_websocket::websocket;
 fn main() {
     // Build the window.
     let display = glium::glutin::WindowBuilder::new()
@@ -37,17 +39,19 @@ fn main() {
     std::thread::spawn(move || run_conrod::run(rust_logo, event_rx, render_tx, window_proxy));
     let mut c = 0;
     let mut last_update = std::time::Instant::now();
-        let event_tx_clone = event_tx.clone();
-        std::thread::spawn(move || {
-            let mut o = 0;
-                'update: loop {
-                    println!("o {:?}",o);
-                    let five_sec = std::time::Duration::from_secs(5);
-                     std::thread::sleep(five_sec);
-                     event_tx_clone.send(Message::Websocket(o)).unwrap();
-                     o+=1;
-                }
-        });
+    let event_tx_clone = event_tx.clone();
+    std::thread::spawn(move || {
+        let mut o = "".to_owned();
+        'update: loop {
+            println!("o {:?}", o);
+            let five_sec = std::time::Duration::from_secs(5);
+            std::thread::sleep(five_sec);
+            event_tx_clone.send(Message::Websocket(websocket::OwnedMessage::Text(o.clone())))
+                .unwrap();
+            let z = "world ";
+            o.push_str(z);
+        }
+    });
     'main: loop {
 
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least
