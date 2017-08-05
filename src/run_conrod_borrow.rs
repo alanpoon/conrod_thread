@@ -41,9 +41,11 @@ pub fn run(rust_logo: conrod::image::Id,
         // Collect any pending events.
         let mut events = Vec::new();
         while let Ok(event) = event_rx.try_recv() {
-            if let Conrod_Message::Websocket(websocket::OwnedMessage::Text(j)) = event.clone() {
-                demo_text = j;
-            }
+                    if let Conrod_Message::Websocket(j) = event.clone() {
+                        if let websocket::OwnedMessage::Text(z) = websocket::OwnedMessage::from(j){
+                            demo_text = z;
+                        }
+                    }
             events.push(event);
         }
 
@@ -51,8 +53,10 @@ pub fn run(rust_logo: conrod::image::Id,
         if events.is_empty() || !needs_update {
             match event_rx.recv() {
                 Ok(event) => {
-                    if let Conrod_Message::Websocket(websocket::OwnedMessage::Text(j)) = event.clone() {
-                        demo_text = j;
+                    if let Conrod_Message::Websocket(j) = event.clone() {
+                        if let websocket::OwnedMessage::Text(z) = websocket::OwnedMessage::from(j){
+                            demo_text = z;
+                        }
                     }
                     events.push(event);
                 }
@@ -108,7 +112,7 @@ fn set_ui(ref mut ui: conrod::UiCell,
     chatview::ChatView::new(j, demo_text).middle_of(ids.master).set(ids.chatview, ui);
 }
 #[derive(Clone,Debug)]
-pub enum Conrod_Message {
+pub enum Conrod_Message<'a> {
     Event(conrod::event::Input),
-    Websocket(websocket::OwnedMessage),
+    Websocket(websocket::Message<'a>),
 }

@@ -13,3 +13,4 @@ pub mod support;
 pub mod app;
 pub mod run_conrod;
 pub mod backend;
+pub mod run_conrod_borrow;

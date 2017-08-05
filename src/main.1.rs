@@ -2,7 +2,7 @@ extern crate conrod_thread;
 extern crate conrod;
 extern crate find_folder;
 extern crate image;
-use conrod_thread::run_conrod_borrow as run_conrod;
+use conrod_thread::run_conrod;
 use run_conrod::Conrod_Message;
 use self::conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
@@ -44,16 +44,16 @@ fn main() {
     let event_tx_clone = event_tx.clone();
     let (futures_tx,futures_rx) = futures::sync::mpsc::channel(1);
     std::thread::spawn(move || {
-        let mut o = "";
+        let mut o = "".to_owned();
         'update: loop {
-             futures_tx.clone().send(websocket::Message::text(o)).wait().unwrap();
+             futures_tx.clone().send(websocket::OwnedMessage::Text("{chat:'hello',location:'lobby'}".to_owned())).wait().unwrap();
             println!("o {:?}", o);
             let five_sec = std::time::Duration::from_secs(5);
             std::thread::sleep(five_sec);
-            event_tx_clone.send(Conrod_Message::Websocket(websocket::Message::text(o)))
+            event_tx_clone.send(Conrod_Message::Websocket(websocket::OwnedMessage::Text(o.clone())))
                 .unwrap();
             let z = "world ";
-           // o.push_str(z);
+            o.push_str(z);
         }
     });
     let (proxy_tx,proxy_rx) =  std::sync::mpsc::channel();
@@ -67,7 +67,7 @@ fn main() {
         }
     });
     std::thread::spawn(move||{
-        client1::run_borrow(proxy_tx,futures_rx);
+        client1::run(proxy_tx,futures_rx);
     });
     'main: loop { 
 
