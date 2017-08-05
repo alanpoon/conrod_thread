@@ -9,6 +9,7 @@ use conrod::backend::glium::glium::{DisplayBuild, Surface};
 const WIN_W: u32 = 600;
 const WIN_H: u32 = 800;
 use conrod_thread::backend::greed_websocket::futures;
+use conrod_thread::backend::greed_websocket::futures::{Future, Sink};
 use conrod_thread::backend::greed_websocket::websocket;
 use conrod_thread::backend::greed_websocket::client1;
 fn main() {
@@ -41,9 +42,11 @@ fn main() {
     let mut c = 0;
     let mut last_update = std::time::Instant::now();
     let event_tx_clone = event_tx.clone();
+    let (futures_tx,futures_rx) = futures::sync::mpsc::channel(1);
     std::thread::spawn(move || {
         let mut o = "".to_owned();
         'update: loop {
+             futures_tx.clone().send(websocket::OwnedMessage::Text("hello".to_owned())).wait().unwrap();
             println!("o {:?}", o);
             let five_sec = std::time::Duration::from_secs(5);
             std::thread::sleep(five_sec);
@@ -55,6 +58,7 @@ fn main() {
     });
     let (proxy_tx,proxy_rx) =  std::sync::mpsc::channel();
      let event_tx_clone_2 = event_tx.clone();
+
     std::thread::spawn(move||{
         'proxy: loop{
              while let Ok(s) = proxy_rx.try_recv() {
@@ -63,7 +67,7 @@ fn main() {
         }
     });
     std::thread::spawn(move||{
-        client1::run(proxy_tx,);
+        client1::run(proxy_tx,futures_rx);
     });
     'main: loop { 
 

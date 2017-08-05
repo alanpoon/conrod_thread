@@ -5,6 +5,7 @@ use conrod::backend::glium::glium;
 use app::Ids;
 use greed_websocket::backend::futures;
 use greed_websocket::backend::websocket;
+use greed_websocket::backend::futures::{Future, Sink};
 use find_folder;
 const WIN_W: u32 = 800;
 const WIN_H: u32 = 600;
