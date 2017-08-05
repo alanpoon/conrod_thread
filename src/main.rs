@@ -10,6 +10,7 @@ const WIN_W: u32 = 600;
 const WIN_H: u32 = 800;
 use conrod_thread::backend::greed_websocket::futures;
 use conrod_thread::backend::greed_websocket::websocket;
+use conrod_thread::backend::greed_websocket::client1;
 fn main() {
     // Build the window.
     let display = glium::glutin::WindowBuilder::new()
@@ -52,7 +53,19 @@ fn main() {
             o.push_str(z);
         }
     });
-    'main: loop {
+    let (proxy_tx,proxy_rx) =  std::sync::mpsc::channel();
+     let event_tx_clone_2 = event_tx.clone();
+    std::thread::spawn(move||{
+        'proxy: loop{
+             while let Ok(s) = proxy_rx.try_recv() {
+                event_tx_clone_2.send(Message::Websocket(s)).unwrap();
+             }
+        }
+    });
+    std::thread::spawn(move||{
+        client1::run(proxy_tx,);
+    });
+    'main: loop { 
 
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least
         // 16ms since the last yield.
