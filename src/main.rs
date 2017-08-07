@@ -12,6 +12,7 @@ use conrod_thread::backend::greed_websocket::futures;
 use conrod_thread::backend::greed_websocket::futures::{Future, Sink};
 use conrod_thread::backend::greed_websocket::websocket;
 use conrod_thread::backend::greed_websocket::client1;
+
 fn main() {
     // Build the window.
     let display = glium::glutin::WindowBuilder::new()
@@ -44,16 +45,18 @@ fn main() {
     let event_tx_clone = event_tx.clone();
     let (futures_tx,futures_rx) = futures::sync::mpsc::channel(1);
     std::thread::spawn(move || {
-        let mut o = "";
+        let mut o = "{chat:'hello',location:'lobby'}";
+        let mut c=0;
         'update: loop {
+            if c>10{
+                break 'update;
+            }
              futures_tx.clone().send(websocket::Message::text(o)).wait().unwrap();
-            println!("o {:?}", o);
             let five_sec = std::time::Duration::from_secs(5);
             std::thread::sleep(five_sec);
             event_tx_clone.send(Conrod_Message::Websocket(websocket::Message::text(o)))
                 .unwrap();
-            let z = "world ";
-           // o.push_str(z);
+                c+=1;
         }
     });
     let (proxy_tx,proxy_rx) =  std::sync::mpsc::channel();
@@ -69,6 +72,8 @@ fn main() {
     std::thread::spawn(move||{
         client1::run_borrow(proxy_tx,futures_rx);
     });
+   
+
     'main: loop { 
 
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least

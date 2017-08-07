@@ -2,6 +2,7 @@ extern crate image;
 extern crate greed_websocket;
 extern crate itertools;
 extern crate find_folder;
+extern crate libloading;
 #[macro_use]
 extern crate conrod;
 #[macro_use]
@@ -11,6 +12,8 @@ pub mod custom_widget;
 //pub mod engine;
 pub mod support;
 pub mod app;
-pub mod run_conrod;
+//pub mod run_conrod;
 pub mod backend;
 pub mod run_conrod_borrow;
+pub mod gui;
+pub mod dyapplication;

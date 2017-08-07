@@ -1,0 +1,1 @@
+rustc src/test_shared.rs --crate-name test_shared --crate-type dylib --out-dir target/debug

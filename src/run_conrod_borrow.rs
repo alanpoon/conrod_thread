@@ -1,14 +1,21 @@
 use std;
-use conrod::{self, widget, Colorable, Positionable, Sizeable, Widget, color};
-use custom_widget::chatview;
+use conrod;
+use custom_widget::chatview_ownedmsg as chatview;
 use conrod::backend::glium::glium;
 use app::Ids;
 use greed_websocket::backend::futures;
 use greed_websocket::backend::websocket;
 use greed_websocket::backend::futures::{Future, Sink};
 use find_folder;
+use gui::set_ui;
+use dyapplication::Application;
+use libloading::Library;
+use std::collections::VecDeque;
+use gui;
 const WIN_W: u32 = 800;
 const WIN_H: u32 = 600;
+const LIB_PATH: &'static str = "target/debug/libtest_shared.so";
+
 pub fn run(rust_logo: conrod::image::Id,
            event_rx: std::sync::mpsc::Receiver<Conrod_Message>,
            render_tx: std::sync::mpsc::Sender<conrod::render::OwnedPrimitives>,
@@ -21,6 +28,13 @@ pub fn run(rust_logo: conrod::image::Id,
     let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
     let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
     ui.fonts.insert_from_file(font_path).unwrap();
+    let mut history:VecDeque<chatview::Message> = VecDeque::new();
+    history.push_back(chatview::Message{
+        image_id:rust_logo,
+        name:"alan".to_owned(),
+        text:"Hello".to_owned(),
+        height:50.0
+    });
     let mut demo_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. \
             Mauris aliquet porttitor tellus vel euismod. Integer lobortis volutpat bibendum. Nulla \
             finibus odio nec elit condimentum, rhoncus fermentum purus lacinia. Interdum et malesuada \
@@ -28,10 +42,24 @@ pub fn run(rust_logo: conrod::image::Id,
             Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. \
             Quisque commodo nibh hendrerit nunc sollicitudin sodales. Cras vitae tempus ipsum. Nam \
             magna est, efficitur suscipit dolor eu, consectetur consectetur urna.".to_owned();
-
+    
     let mut needs_update = true;
     let mut last_update = std::time::Instant::now();
+     let mut app =
+    Application(Library::new(LIB_PATH).unwrap_or_else(|error| panic!("{}", error)));
+
+    let mut last_modified = std::fs::metadata(LIB_PATH).unwrap().modified().unwrap();
     'conrod: loop {
+        if let Ok(Ok(modified)) = std::fs::metadata(LIB_PATH).map(|m| m.modified()) {
+    if modified > last_modified {
+            drop(app);
+            app = Application(Library::new(LIB_PATH).unwrap_or_else(|error| {
+                                                                        panic!("{}", error)
+                                                                        }));
+                last_modified = modified;
+
+            }
+        }
         let sixteen_ms = std::time::Duration::from_millis(16);
         let now = std::time::Instant::now();
         let duration_since_last_update = now.duration_since(last_update);
@@ -41,11 +69,8 @@ pub fn run(rust_logo: conrod::image::Id,
         // Collect any pending events.
         let mut events = Vec::new();
         while let Ok(event) = event_rx.try_recv() {
-                    if let Conrod_Message::Websocket(j) = event.clone() {
-                        if let websocket::OwnedMessage::Text(z) = websocket::OwnedMessage::from(j){
-                            demo_text = z;
-                        }
-                    }
+            println!("collect Pending");
+                    gui::update_state(rust_logo,event.clone(),&mut demo_text,&mut history);
             events.push(event);
         }
 
@@ -53,11 +78,8 @@ pub fn run(rust_logo: conrod::image::Id,
         if events.is_empty() || !needs_update {
             match event_rx.recv() {
                 Ok(event) => {
-                    if let Conrod_Message::Websocket(j) = event.clone() {
-                        if let websocket::OwnedMessage::Text(z) = websocket::OwnedMessage::from(j){
-                            demo_text = z;
-                        }
-                    }
+                    println!("events is empty()");
+                    gui::update_state(rust_logo,event.clone(),&mut demo_text,&mut history);
                     events.push(event);
                 }
                 Err(_) => break 'conrod,
@@ -76,7 +98,7 @@ pub fn run(rust_logo: conrod::image::Id,
 
 
         // Instantiate the widgets.
-        set_ui(ui.set_widgets(), &ids, rust_logo, &mut demo_text);
+        set_ui(ui.set_widgets(), &ids, &mut demo_text,&mut history,app.get_static_styles());
         // Render the `Ui` and then display it on the screen.
         if let Some(primitives) = ui.draw_if_changed() {
             if render_tx.send(primitives.owned()).is_err() {
@@ -85,32 +107,11 @@ pub fn run(rust_logo: conrod::image::Id,
             // Wakeup `winit` for rendering.
             window_proxy.wakeup_event_loop();
         }
-
-        println!("instantiate c {:?}", demo_text);
     }
     // Load the Rust logo from our assets folder to use as an example image.
 
 }
-fn set_ui(ref mut ui: conrod::UiCell,
-          ids: &Ids,
-          rust_logo: conrod::image::Id,
-          demo_text: &mut String) {
-    widget::Canvas::new().color(color::LIGHT_BLUE).set(ids.master, ui);
-    // Instantiate the `Image` at its full size in the middle of the window.
-    let j = vec![chatview::Message {
-                     image_id: rust_logo,
-                     name: "alan",
-                     text: "jj",
-                     height: 40.0,
-                 },
-                 chatview::Message {
-                     image_id: rust_logo,
-                     name: "alan",
-                     text: "jj",
-                     height: 80.0,
-                 }];
-    chatview::ChatView::new(j, demo_text).middle_of(ids.master).set(ids.chatview, ui);
-}
+
 #[derive(Clone,Debug)]
 pub enum Conrod_Message<'a> {
     Event(conrod::event::Input),

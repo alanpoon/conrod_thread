@@ -2,6 +2,7 @@ use conrod::{self, widget, Colorable, Labelable, Positionable, Widget, image, Si
 use self::widget::id::Generator;
 use itertools::multizip;
 use dyapplication;
+use std::collections::VecDeque;
 /// The type upon which we'll implement the `Widget` trait.
 const MARGIN: conrod::Scalar = 30.0;
 #[derive(WidgetCommon)]
@@ -10,18 +11,20 @@ pub struct ChatView<'a> {
     /// really have to worry about it.
     #[conrod(common_builder)]
     common: widget::CommonBuilder,
-    lists: Vec<Message<'a>>,
+    lists: &'a mut VecDeque<Message>,
     text_edit: &'a mut String,
     /// See the Style struct below.
     style: Style,
     /// Whether the button is currently enabled, i.e. whether it responds to
     /// user input.
+    static_style:dyapplication::Static_Style,
     enabled: bool,
 }
-pub struct Message<'a> {
+
+pub struct Message {
     pub image_id: image::Id,
-    pub name: &'a str,
-    pub text: &'a str,
+    pub name: String,
+    pub text: String,
     pub height: f64,
 }
 
@@ -69,12 +72,13 @@ impl State {
 }
 impl<'a> ChatView<'a> {
     /// Create a button context to be built upon.
-    pub fn new(lists: Vec<Message<'a>>, te: &'a mut String,static_s:dyapplication::Static_Style) -> Self {
+    pub fn new(lists: &'a mut VecDeque<Message>, te: &'a mut String, static_s:dyapplication::Static_Style) -> Self {
         ChatView {
             lists: lists,
             common: widget::CommonBuilder::default(),
             text_edit: te,
             style: Style::default(),
+            static_style:static_s,
             enabled: true,
         }
     }
@@ -120,6 +124,7 @@ impl<'a> Widget for ChatView<'a> {
     fn update(self, args: widget::UpdateArgs<Self>) -> Option<()> {
         let widget::UpdateArgs { id, mut state, rect, mut ui, style, .. } = args;
         let num_list = self.lists.len();
+        let static_style = self.static_style;
         if state.ids.display_pics.len() < num_list {
             state.update(|state| {
                              state.ids.display_pics.resize(num_list, &mut ui.widget_id_generator())
@@ -187,37 +192,34 @@ impl<'a> Widget for ChatView<'a> {
                       state.ids.texts.iter(),
                       state.ids.rects.iter())) {
 
-            /*   widget::Rectangle::fill([w-30.0, a.height])
-                .up(a.height)
+               widget::Rectangle::fill([static_style.rect.0, a.height])
+                .down(a.height)
                 .align_middle_x_of(id)
               //  .graphics_for(id)
                 .color(color)
                 .set(rect_i, ui);
             widget::Image::new(a.image_id)
-                .middle_of(rect_i)
-                .w_h(0.8 * h, 0.8 * h)
-                .parent(rect_i)
+                .top_left_with_margins_on(rect_i,static_style.image.3,static_style.image.4)
+                .w_h(static_style.image.1, static_style.image.2)
                 .set(dp_i, ui);
 
             // Now we'll instantiate our label using the **Text** widget.
-
-            let label_color = style.label_color(&ui.theme);
-            let font_size = style.label_font_size(&ui.theme);
+        let dyapplication::RGB(nr, ng, nb, na) = static_style.name.1;
             let font_id = style.label_font_id(&ui.theme).or(ui.fonts.ids().next());
-            widget::Text::new(a.name)
+            widget::Text::new(&a.name)
                 .and_then(font_id, widget::Text::font_id)
-                .mid_left_of(rect_i)
-                .font_size(font_size)
-                .color(label_color)
+                .top_left_with_margins_on(rect_i,static_style.name.4,static_style.name.5)
+                .font_size(static_style.name.0)
+                .color(color::Color::Rgba(nr, ng, nb, na))
                 .set(name_i, ui);
-
-            widget::Text::new(a.text)
+        let dyapplication::RGB(tr, tg, tb, ta) = static_style.text.1;
+            widget::Text::new(&a.text)
                 .and_then(font_id, widget::Text::font_id)
-                .mid_left_with_margin_on(rect_i, 50.0)
-                .font_size(font_size)
-                .color(label_color)
+                .top_left_with_margins_on(rect_i,static_style.text.4,static_style.text.5)
+                .font_size(static_style.text.0)
+                .color(color::Color::Rgba(tr, tg, tb, ta))
                 .set(text_i, ui);
-                */
+                
         }
 
         Some(())
