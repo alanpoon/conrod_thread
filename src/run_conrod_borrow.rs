@@ -16,8 +16,9 @@ const WIN_W: u32 = 800;
 const WIN_H: u32 = 600;
 const LIB_PATH: &'static str = "target/debug/libtest_shared.so";
 
-pub fn run(rust_logo: conrod::image::Id,
+pub fn run<'a>(rust_logo: conrod::image::Id,
            event_rx: std::sync::mpsc::Receiver<Conrod_Message>,
+           action_tx:std::sync::mpsc::Sender<chatview::Message>,
            render_tx: std::sync::mpsc::Sender<conrod::render::OwnedPrimitives>,
            window_proxy: glium::glutin::WindowProxy) {
     let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).build();
@@ -28,13 +29,12 @@ pub fn run(rust_logo: conrod::image::Id,
     let assets = find_folder::Search::KidsThenParents(3, 5).for_folder("assets").unwrap();
     let font_path = assets.join("fonts/NotoSans/NotoSans-Regular.ttf");
     ui.fonts.insert_from_file(font_path).unwrap();
-    let mut history:VecDeque<chatview::Message> = VecDeque::new();
-    history.push_back(chatview::Message{
-        image_id:rust_logo,
-        name:"alan".to_owned(),
-        text:"Hello".to_owned(),
-        height:50.0
-    });
+    let mut history: VecDeque<chatview::Message> = VecDeque::new();
+    history.push_back(chatview::Message {
+                          image_id: rust_logo,
+                          name: "alan".to_owned(),
+                          text: "Hello".to_owned(),
+                      });
     let mut demo_text = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. \
             Mauris aliquet porttitor tellus vel euismod. Integer lobortis volutpat bibendum. Nulla \
             finibus odio nec elit condimentum, rhoncus fermentum purus lacinia. Interdum et malesuada \
@@ -42,20 +42,18 @@ pub fn run(rust_logo: conrod::image::Id,
             Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. \
             Quisque commodo nibh hendrerit nunc sollicitudin sodales. Cras vitae tempus ipsum. Nam \
             magna est, efficitur suscipit dolor eu, consectetur consectetur urna.".to_owned();
-    
+    let mut name = "Kop".to_owned();
     let mut needs_update = true;
     let mut last_update = std::time::Instant::now();
-     let mut app =
-    Application(Library::new(LIB_PATH).unwrap_or_else(|error| panic!("{}", error)));
+    let mut app = Application(Library::new(LIB_PATH).unwrap_or_else(|error| panic!("{}", error)));
 
     let mut last_modified = std::fs::metadata(LIB_PATH).unwrap().modified().unwrap();
     'conrod: loop {
         if let Ok(Ok(modified)) = std::fs::metadata(LIB_PATH).map(|m| m.modified()) {
-    if modified > last_modified {
-            drop(app);
-            app = Application(Library::new(LIB_PATH).unwrap_or_else(|error| {
-                                                                        panic!("{}", error)
-                                                                        }));
+            if modified > last_modified {
+                drop(app);
+                app =
+                    Application(Library::new(LIB_PATH).unwrap_or_else(|error| panic!("{}", error)));
                 last_modified = modified;
 
             }
@@ -69,8 +67,7 @@ pub fn run(rust_logo: conrod::image::Id,
         // Collect any pending events.
         let mut events = Vec::new();
         while let Ok(event) = event_rx.try_recv() {
-            println!("collect Pending");
-                    gui::update_state(rust_logo,event.clone(),&mut demo_text,&mut history);
+            gui::update_state(rust_logo, event.clone(), &mut demo_text, &mut history);
             events.push(event);
         }
 
@@ -78,8 +75,7 @@ pub fn run(rust_logo: conrod::image::Id,
         if events.is_empty() || !needs_update {
             match event_rx.recv() {
                 Ok(event) => {
-                    println!("events is empty()");
-                    gui::update_state(rust_logo,event.clone(),&mut demo_text,&mut history);
+                    gui::update_state(rust_logo, event.clone(), &mut demo_text, &mut history);
                     events.push(event);
                 }
                 Err(_) => break 'conrod,
@@ -98,7 +94,11 @@ pub fn run(rust_logo: conrod::image::Id,
 
 
         // Instantiate the widgets.
-        set_ui(ui.set_widgets(), &ids, &mut demo_text,&mut history,app.get_static_styles());
+        set_ui(ui.set_widgets(),
+               &ids,
+               &mut demo_text,
+               &mut history,
+               app.get_static_styles(),rust_logo,&mut name,action_tx.clone());
         // Render the `Ui` and then display it on the screen.
         if let Some(primitives) = ui.draw_if_changed() {
             if render_tx.send(primitives.owned()).is_err() {

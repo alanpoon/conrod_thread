@@ -2,8 +2,6 @@ use libloading::Library;
 use conrod::{position, Positionable};
 use conrod::Rect;
 use conrod::widget::Rectangle;
-use conrod::widget::id::Id;
-use conrod::color::Color::Rgba;
 pub struct Application(pub Library);
 
 #[derive(Clone,Copy,PartialEq,Debug)]
@@ -32,11 +30,10 @@ pub struct RGB(pub f32, pub f32, pub f32, pub f32);
 #[derive(Clone,PartialEq,Debug)]
 pub struct Static_Style{
     pub w_h: (f64, f64),
-    pub rect: (f64, f64,f64), //w,h, pad bottom
-    pub name:(u32, RGB, f64, f64, f64, f64), // fontsize,RGB,w,h,l,t
+    pub rect: (RGB,f64, f64,f64), //w,h, pad bottom
     pub image: (SpriteInfo, f64, f64, f64, f64), // w,h,l,t
+    pub text:(u32, RGB, f64, f64, f64, f64), // fontsize,RGB,w,h,l,t
 }
-
 impl Application {
     pub fn get_static_styles(&self) -> Static_Style {
         unsafe {

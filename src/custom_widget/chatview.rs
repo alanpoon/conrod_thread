@@ -69,7 +69,10 @@ impl State {
 }
 impl<'a> ChatView<'a> {
     /// Create a button context to be built upon.
-    pub fn new(lists: Vec<Message<'a>>, te: &'a mut String,static_s:dyapplication::Static_Style) -> Self {
+    pub fn new(lists: Vec<Message<'a>>,
+               te: &'a mut String,
+               static_s: dyapplication::Static_Style)
+               -> Self {
         ChatView {
             lists: lists,
             common: widget::CommonBuilder::default(),

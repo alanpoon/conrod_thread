@@ -8,11 +8,12 @@ use self::conrod::backend::glium::glium;
 use conrod::backend::glium::glium::{DisplayBuild, Surface};
 const WIN_W: u32 = 600;
 const WIN_H: u32 = 800;
+use conrod_thread::backend::greed_websocket::app as g_w_app;
 use conrod_thread::backend::greed_websocket::futures;
 use conrod_thread::backend::greed_websocket::futures::{Future, Sink};
 use conrod_thread::backend::greed_websocket::websocket;
 use conrod_thread::backend::greed_websocket::client1;
-
+use conrod_thread::custom_widget::chatview_ownedmsg as chatview;
 fn main() {
     // Build the window.
     let display = glium::glutin::WindowBuilder::new()
@@ -39,42 +40,52 @@ fn main() {
     let (render_tx, render_rx) = std::sync::mpsc::channel();
     // This window proxy will allow conrod to wake up the `winit::Window` for rendering.
     let window_proxy = display.get_window().unwrap().create_window_proxy();
-    std::thread::spawn(move || run_conrod::run(rust_logo, event_rx, render_tx, window_proxy));
     let mut c = 0;
     let mut last_update = std::time::Instant::now();
-    let event_tx_clone = event_tx.clone();
-    let (futures_tx,futures_rx) = futures::sync::mpsc::channel(1);
+  //  let event_tx_clone = event_tx.clone();
+    let (futures_tx, futures_rx) = futures::sync::mpsc::channel(1);
+    let (proxy_action_tx,proxy_action_rx) = std::sync::mpsc::channel(); //chatview::Message
+    std::thread::spawn(move || run_conrod::run(rust_logo, event_rx,proxy_action_tx, render_tx, window_proxy));
     std::thread::spawn(move || {
         let mut o = "{chat:'hello',location:'lobby'}";
-        let mut c=0;
+        let mut c = 0;
         'update: loop {
-            if c>10{
+            if c > 4 {
                 break 'update;
             }
-             futures_tx.clone().send(websocket::Message::text(o)).wait().unwrap();
+            futures_tx.clone()
+                .send(websocket::Message::text(o))
+                .wait()
+                .unwrap();
             let five_sec = std::time::Duration::from_secs(5);
             std::thread::sleep(five_sec);
-            event_tx_clone.send(Conrod_Message::Websocket(websocket::Message::text(o)))
-                .unwrap();
-                c+=1;
+        //    event_tx_clone.send(Conrod_Message::Websocket(websocket::Message::text(o))).unwrap();
+            c += 1;
         }
     });
-    let (proxy_tx,proxy_rx) =  std::sync::mpsc::channel();
-     let event_tx_clone_2 = event_tx.clone();
+    let (proxy_tx, proxy_rx) = std::sync::mpsc::channel();
+    let event_tx_clone_2 = event_tx.clone();
+    std::thread::spawn(move || 'proxy: loop {
+                        //send to conrod
+                           while let Ok(s) = proxy_rx.try_recv() {
+                               event_tx_clone_2.send(Conrod_Message::Websocket(s)).unwrap();
+                           }
+                           // send to Websocket
+                           while let Ok(s) = proxy_action_rx.try_recv(){
+                               if let chatview::Message{text,..} = s{
+                                   let kl = g_w_app::SendMsg{
+                                       chat:text,
+                                       location:"lobby"
+                                   };
+                               event_tx_clone_2.send(websocket::backend::Message::text(g_w_app::serialize_send(kl))).unwrap();
 
-    std::thread::spawn(move||{
-        'proxy: loop{
-             while let Ok(s) = proxy_rx.try_recv() {
-                event_tx_clone_2.send(Conrod_Message::Websocket(s)).unwrap();
-             }
-        }
-    });
-    std::thread::spawn(move||{
-        client1::run_borrow(proxy_tx,futures_rx);
-    });
-   
+                               }
+                           }
+                       });
+    std::thread::spawn(move || { client1::run_borrow(proxy_tx, futures_rx); });
 
-    'main: loop { 
+
+    'main: loop {
 
         // We don't want to loop any faster than 60 FPS, so wait until it has been at least
         // 16ms since the last yield.

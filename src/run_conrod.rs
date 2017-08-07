@@ -5,7 +5,7 @@ use conrod::backend::glium::glium;
 use app::Ids;
 use greed_websocket::backend::futures;
 use greed_websocket::backend::websocket;
-use greed_websocket::backend::futures::{Future, Sink};
+use greed_websocket::backend::futures::{Self,Future, Sink};
 use find_folder;
 use gui::set_ui;
 use dyapplication::Application;
@@ -17,6 +17,7 @@ const LIB_PATH: &'static str = "target/debug/libtest_shared.so";
 
 pub fn run(rust_logo: conrod::image::Id,
            event_rx: std::sync::mpsc::Receiver<Conrod_Message>,
+           futures_tx:futures::sync::mpsc::Sender<websocket::OwnedMessage>,
            render_tx: std::sync::mpsc::Sender<conrod::render::OwnedPrimitives>,
            window_proxy: glium::glutin::WindowProxy) {
     let mut ui = conrod::UiBuilder::new([WIN_W as f64, WIN_H as f64]).build();
@@ -34,6 +35,7 @@ pub fn run(rust_logo: conrod::image::Id,
             Cum sociis natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. \
             Quisque commodo nibh hendrerit nunc sollicitudin sodales. Cras vitae tempus ipsum. Nam \
             magna est, efficitur suscipit dolor eu, consectetur consectetur urna.".to_owned();
+    let name = "Kop".to_owned();
    let mut history:VecDeque<chatview::OwnedMessage> = VecDeque::new();
     let mut needs_update = true;
     let mut last_update = std::time::Instant::now();
